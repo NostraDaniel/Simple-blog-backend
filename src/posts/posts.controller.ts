@@ -44,8 +44,6 @@ export class PostsController {
       })) post: NewPostDTO,
       @AuthUser() user: User
     ): Promise<PostEntity> {
-      console.log('v controlera na postvankata');
-      console.log(post);
     return await this.postsService.createNewPost(post, user);
   }
 

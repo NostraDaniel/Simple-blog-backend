@@ -13,6 +13,11 @@ export class FrontImageEntity {
   @Column()
   src: string;
 
+  @OneToOne(type => PostEntity, post => post.frontImage, {
+    onDelete: 'CASCADE',
+  })
+  post: Promise<PostEntity>
+
   @CreateDateColumn()
   createdOn: Date;
 }

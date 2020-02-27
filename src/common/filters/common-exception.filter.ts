@@ -8,7 +8,7 @@ export class CommonExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    console.log('error syobshtenie', exception.message);
+    
     response
     .status(exception.status)
       .json({

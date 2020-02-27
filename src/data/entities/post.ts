@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, OneToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, OneToOne, JoinColumn } from "typeorm";
 import { User } from "./user";
 import { FrontImageEntity } from "./front-image";
 import { GalleryImageEntity } from "./gallery-image";
@@ -24,7 +24,8 @@ export class PostEntity {
   @Column({ default: false })
   isFrontPage: boolean;
 
-  @OneToOne(type => FrontImageEntity, image => image.post, {cascade: true})
+  @OneToOne(type => FrontImageEntity, {cascade: true})
+  @JoinColumn()
   frontImage: Promise<FrontImageEntity>;
 
   @OneToMany(type => GalleryImageEntity, image => image.post, {cascade: true})

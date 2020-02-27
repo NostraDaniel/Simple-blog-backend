@@ -22,7 +22,7 @@ export class AuthController {
     if (!authObject) {
       throw new BadRequestException(`Wrong credentials!`);
     }
-    console.log(authObject);
+
     return authObject;
   }
 

@@ -30,26 +30,25 @@ export class PostsService {
   
   // GET all posts
   public async getAllPosts(page: number = 1, postsPerPage: number = 12, filter: string = ''): Promise<{postsCount: number, posts: PostEntity[]}> {
-
     const allPosts: [PostEntity[], number] = filter.trim().length > 0 ? 
       await this.postsRepository.findAndCount({
         where: {
           title: filter,
         },
         relations: ['frontImage'],
-        // take: postsPerPage,
-        // skip: postsPerPage * (page - 1),
-        // order: {
-        //   createdOn: "DESC"
-        // },
+        take: postsPerPage,
+        skip: postsPerPage * (page - 1),
+        order: {
+          createdOn: "DESC"
+        },
       }) :
       await this.postsRepository.findAndCount({
-        // take: postsPerPage,
-        // skip: postsPerPage * (page - 1),
+        take: postsPerPage,
+        skip: postsPerPage * (page - 1),
         relations: ['frontImage'],
-        // order: {
-        //   createdOn: "DESC"
-        // },
+        order: {
+          createdOn: "DESC"
+        },
       });
 
     return {postsCount: allPosts[1], posts: allPosts[0]};
@@ -61,17 +60,13 @@ export class PostsService {
       where: {
         id
       },
+      relations: ['frontImage', 'gallery'],
     })
-
-    await foundPost.frontImage;
-    await foundPost.gallery;
-    console.log(foundPost);
 
     if ( !foundPost ) {
       throw new PostNotFound(`Post with this ID ${id} doesn't exist`);
     }
-    console.log('otkrivanka');
-    console.log(foundPost);
+
     return foundPost;
   }
   
@@ -94,7 +89,6 @@ export class PostsService {
     }
 
     if(!!frontImage && Object.keys(frontImage).length > 0) {
-      console.log('front img vytre');
       const newFrontImage = new FrontImageEntity();
   
       newFrontImage.src = frontImage.src;
@@ -104,7 +98,6 @@ export class PostsService {
     }
     
     if(isArray(gallery) && gallery.length > 0) {
-      console.log('galeriq vytre');
       const arrGallery = gallery.map(image => {
         const newImg =  new GalleryImageEntity();
   
@@ -118,7 +111,7 @@ export class PostsService {
     }
 
     const savedPost = await this.postsRepository.save(newPost);
-    console.log(savedPost);
+    
     return savedPost;
   }
 
