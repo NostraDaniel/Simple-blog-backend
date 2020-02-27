@@ -22,7 +22,7 @@ export class AuthController {
     if (!authObject) {
       throw new BadRequestException(`Wrong credentials!`);
     }
-
+    console.log(authObject);
     return authObject;
   }
 
@@ -31,8 +31,6 @@ export class AuthController {
     transform: true,
     whitelist: true,
   })) user: UserRegisterDTO): Promise<any> {
-    console.log('here');
-    console.log(user);
     return await this.usersService.register(user);
   }
 }

@@ -8,6 +8,7 @@ import { ConfigService } from './config/config.service';
 import { PostsController } from './posts/posts.controller';
 import { PostsModule } from './posts/posts.module';
 import { CommonModule } from './common/common.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 // type, host, port, username, password, database, entities
 
@@ -32,6 +33,7 @@ import { CommonModule } from './common/common.module';
     }),
     PostsModule,
     CommonModule,
+    FeedbackModule,
   ],
   controllers: [AppController, PostsController],
   providers: [],

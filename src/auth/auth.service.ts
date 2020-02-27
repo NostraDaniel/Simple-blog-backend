@@ -24,6 +24,7 @@ export class AuthService {
   }
 
   async validateUser(payload: JwtPayload): Promise<User | undefined> {
+    console.log('validaciq na user-a');
     return await this.usersService.validate(payload);
   }
 }

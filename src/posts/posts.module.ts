@@ -6,11 +6,12 @@ import { PassportModule } from '@nestjs/passport';
 import { CommonModule } from '../common/common.module';
 import { User } from '../data/entities/user';
 import { PostEntity } from '../data/entities/post';
-import { ImageEntity } from '../data/entities/image';
+import { FrontImageEntity } from '../data/entities/front-image';
+import { GalleryImageEntity } from '../data/entities/gallery-image';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PostEntity, User, ImageEntity]),
+    TypeOrmModule.forFeature([PostEntity, User, FrontImageEntity, GalleryImageEntity]),
     PassportModule.register({defaultStrategy: 'jwt'}),
     CommonModule
   ],

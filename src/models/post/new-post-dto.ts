@@ -9,7 +9,7 @@ export class NewPostDTO {
 
     @IsNotEmpty()
     @IsString()
-    @Length(5, 1000)
+    @Length(15, 10000)
     content: string;
 
     @IsNotEmpty()

@@ -6,22 +6,26 @@ import { NewPostDTO } from '../models/post/new-post-dto';
 import { User } from '../data/entities/user';
 import { PostNotFound } from '../common/exceptions/posts/post-not-found.exception';
 import { ShowImageDTO } from '../models/post/show-image-dto';
-import { ImageEntity } from '../data/entities/image';
 import { NoFileException } from '../common/exceptions/posts/no-file.exception';
 import { UploadedFileImageDTO } from '../models/post/uploaded-file-image-dto';
+import { isArray } from 'util';
+import { FrontImageEntity } from '../data/entities/front-image';
+import { GalleryImageEntity } from '../data/entities/gallery-image';
 
 @Injectable()
 export class PostsService {
 
-  private SERVER_URL:  string  =  "http://localhost:4202/";
+  private readonly SERVER_URL:  string  =  "http://localhost:4202/";
 
   constructor(
     @InjectRepository(PostEntity)
     private readonly postsRepository: Repository<PostEntity>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(ImageEntity)
-    private readonly imageRepository: Repository<ImageEntity>,
+    @InjectRepository(FrontImageEntity)
+    private readonly frontImageRepository: Repository<FrontImageEntity>,
+    @InjectRepository(GalleryImageEntity)
+    private readonly galleryImageRepository: Repository<GalleryImageEntity>,
   ) {}
   
   // GET all posts
@@ -33,16 +37,19 @@ export class PostsService {
           title: filter,
         },
         relations: ['frontImage'],
-        take: postsPerPage,
-        skip: postsPerPage * (page - 1),
-        order: {
-          createdOn: "DESC"
-        },
+        // take: postsPerPage,
+        // skip: postsPerPage * (page - 1),
+        // order: {
+        //   createdOn: "DESC"
+        // },
       }) :
       await this.postsRepository.findAndCount({
-        take: postsPerPage,
-        skip: postsPerPage * (page - 1),
-        relations: ['frontImage']
+        // take: postsPerPage,
+        // skip: postsPerPage * (page - 1),
+        relations: ['frontImage'],
+        // order: {
+        //   createdOn: "DESC"
+        // },
       });
 
     return {postsCount: allPosts[1], posts: allPosts[0]};
@@ -54,43 +61,64 @@ export class PostsService {
       where: {
         id
       },
-      relations: ['gallery']
     })
+
+    await foundPost.frontImage;
+    await foundPost.gallery;
+    console.log(foundPost);
 
     if ( !foundPost ) {
       throw new PostNotFound(`Post with this ID ${id} doesn't exist`);
     }
-
+    console.log('otkrivanka');
+    console.log(foundPost);
     return foundPost;
   }
   
   // POST a post
   public async createNewPost(body: NewPostDTO, author: User) {
     const { title, content, isPublished, description, gallery, isFrontPage, frontImage } = body;
-    const newPost = this.postsRepository.create({ title, content, description, isPublished, isFrontPage});
+    const newPost = new PostEntity();
 
     newPost.author = Promise.resolve(author);
+    newPost.title = title;
+    newPost.content = content;
+    newPost.description = description;
+    
+    if(!!isFrontPage) {
+      newPost.isFrontPage = isFrontPage;
+    }
 
-    const savedPost = await this.postsRepository.save(newPost);
+    if(!!isPublished) {
+      newPost.isPublished = isPublished;
+    }
 
-    if(gallery.length > 0) {
-      for (const image of gallery) {
-        const newImg = await this.imageRepository.create({ url: image.url, filename: image.filename, post: Promise.resolve(savedPost)});
-        
-        this.imageRepository.save(newImg);
-      }
+    if(!!frontImage && Object.keys(frontImage).length > 0) {
+      console.log('front img vytre');
+      const newFrontImage = new FrontImageEntity();
+  
+      newFrontImage.src = frontImage.src;
+      newFrontImage.filename = frontImage.filename;
+  
+      newPost.frontImage = Promise.resolve(newFrontImage);
     }
     
-    if(Object.keys(frontImage).length > 0 ) {
-      const newFrontImage = this.imageRepository.create(frontImage);
-      
-      newFrontImage.post = Promise.resolve(savedPost);
-      await this.imageRepository.save(newFrontImage);
+    if(isArray(gallery) && gallery.length > 0) {
+      console.log('galeriq vytre');
+      const arrGallery = gallery.map(image => {
+        const newImg =  new GalleryImageEntity();
+  
+        newImg.filename = image.filename;
+        newImg.src = image.src;
+  
+        return newImg;
+      });
+  
+      newPost.gallery = Promise.resolve(arrGallery);
     }
 
-    await savedPost.gallery;
-    await savedPost.frontImage;
-
+    const savedPost = await this.postsRepository.save(newPost);
+    console.log(savedPost);
     return savedPost;
   }
 
@@ -121,7 +149,7 @@ export class PostsService {
   // DELETE an existing post
   public async deletePost(id: string, user: User): Promise<PostEntity> {
     const foundPost = await this.getSinglePost(id);
-    const deleted = await this.postsRepository.delete(foundPost);
+    await this.postsRepository.remove(foundPost);
 
     return foundPost;
   }
@@ -132,22 +160,23 @@ export class PostsService {
       throw new NoFileException('No file available!');
     }
     
-    const url = `${this.SERVER_URL}posts/${file.path}`;
+    const src = `${this.SERVER_URL}posts/${file.path}`;
     const { filename } = file;
 
-    return await { url, filename }
+    return await { src, filename }
   }
 
+  // POST save images gallery
   public async uploadImages(files: any): Promise<ShowImageDTO[]> {
     if(files.lenght) {
       throw new NoFileException('No files available!');
     }
 
     return await files.map(file => {
-      const url = `${this.SERVER_URL}posts/${file.path}`;
+      const src = `${this.SERVER_URL}posts/${file.path}`;
       const { filename } = file;
 
-      return { url, filename };
+      return { src, filename };
     });
   }
 

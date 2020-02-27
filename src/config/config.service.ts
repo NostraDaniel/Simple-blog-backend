@@ -14,13 +14,13 @@ export class ConfigService {
 
   constructor(filePath: string = null) {
     let config;
+
     if (filePath) {
       config = dotenv.parse(fs.readFileSync(filePath));
     } else {
       config = dotenv.config().parsed;
     }
     this.envConfig = this.validateInput(config);
-    console.log(this.envConfig);
   }
 
   private validateInput(envConfig: EnvConfig): EnvConfig {
@@ -37,12 +37,18 @@ export class ConfigService {
       DB_USERNAME: Joi.string().default('root'),
       DB_PASSWORD: Joi.string().default('root'),
       DB_DATABASE_NAME: Joi.string().required(),
+      MAIL_HOST: Joi.string().default('smtp.sendgrid.net'),
+      MAIL_PORT: Joi.number().required(),
+      MAIL_USER: Joi.string().required(),
+      MAIL_PASS: Joi.string().required(),
+      MAIL_SECURE: Joi.boolean().required()
     });
 
     const { error, value: validatedEnvConfig } = Joi.validate(
       envConfig,
       envVarsSchema,
     );
+
     if (error) {
       throw new Error(`Config validation error: ${error.message}`);
     }
@@ -84,5 +90,25 @@ export class ConfigService {
 
   public get dbType(): DatabaseType {
     return this.envConfig.DB_TYPE as DatabaseType;
+  }
+
+  public get mailHost(): string {
+    return this.envConfig.MAIL_HOST;
+  }
+
+  public get mailPort(): number {
+    return +this.envConfig.MAIL_PORT;
+  }
+
+  public get mailUser(): string {
+    return this.envConfig.MAIL_USER;
+  }
+
+  public get mailPass(): string {
+    return this.envConfig.MAIL_PASS;
+  }
+
+  public get mailSecure(): boolean {
+    return this.envConfig.MAIL_SECURE === 'true';
   }
 }

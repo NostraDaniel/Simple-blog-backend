@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, OneToOne } from "typeorm";
 import { User } from "./user";
-import { ImageEntity } from "./image";
+import { FrontImageEntity } from "./front-image";
+import { GalleryImageEntity } from "./gallery-image";
 
 @Entity('posts')
 export class PostEntity {
@@ -14,7 +15,7 @@ export class PostEntity {
   @Column('nvarchar')
   title: string;
 
-  @Column({ type: 'nvarchar', length: 3000})
+  @Column({ type: 'nvarchar', length: 10000})
   content: string;
 
   @Column({ type: 'nvarchar', length: 1000})
@@ -23,11 +24,11 @@ export class PostEntity {
   @Column({ default: false })
   isFrontPage: boolean;
 
-  @OneToOne(type => ImageEntity, image => image.post)
-  frontImage: Promise<ImageEntity>;
+  @OneToOne(type => FrontImageEntity, image => image.post, {cascade: true})
+  frontImage: Promise<FrontImageEntity>;
 
-  @OneToMany(type => ImageEntity, image => image.post)
-  gallery: Promise<ImageEntity[]>
+  @OneToMany(type => GalleryImageEntity, image => image.post, {cascade: true})
+  gallery: Promise<GalleryImageEntity[]>
 
   @ManyToOne(type => User, user => user.posts)
   author: Promise<User>;

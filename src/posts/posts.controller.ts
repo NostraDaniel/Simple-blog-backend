@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Param, Put, UseGuards, Body, ValidationPipe, Delete, UseInterceptors, UploadedFile, Res, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Query, Param, Put, UseGuards, Body, ValidationPipe, Delete, UseInterceptors, UploadedFile, Res, UploadedFiles, UseFilters } from '@nestjs/common';
 import { ShowPostDTO } from '../models/post/show-post-dto';
 import { AuthGuard } from '@nestjs/passport';
 import { NewPostDTO } from '../models/post/new-post-dto';
@@ -7,19 +7,22 @@ import { AuthUser } from '../common/decorators/user.decorator';
 import { PostsService } from './posts.service';
 import { diskStorage } from  'multer';
 import { extname } from  'path';
-import { FileInterceptor, FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ShowImageDTO } from '../models/post/show-image-dto';
-import { ImageEntity } from '../data/entities/image';
 import { PostEntity } from '../data/entities/post';
 import { UploadedFileImageDTO } from '../models/post/uploaded-file-image-dto';
+import { CommonExceptionFilter } from '../common/filters/common-exception.filter';
+import { ValidationExceptionFilter } from '../common/filters/validation-exception.filter';
 
 @Controller('posts')
+@UseFilters(new CommonExceptionFilter())
 export class PostsController {
 
   constructor(
     private readonly postsService: PostsService,
   ) {}
-
+  
+  // Get posts by page, posts per page and filter
   @Get()
   async getPosts(
     @Query('page') page: number,
@@ -29,21 +32,25 @@ export class PostsController {
     return await this.postsService.getAllPosts(page, postsPerPage, filter);
   }
 
+  // Creates posts with validation
   @Post()
-  // @UseGuards(AuthGuard())
+  @UseGuards(AuthGuard('jwt'))
+  @UseFilters(new ValidationExceptionFilter())
   async createNewPost
     (
       @Body(new ValidationPipe({
-        transform: true,
+        // transform: true,
+        // whitelist: true,
       })) post: NewPostDTO,
       @AuthUser() user: User
     ): Promise<PostEntity> {
-      console.log('cak', post);
+      console.log('v controlera na postvankata');
+      console.log(post);
     return await this.postsService.createNewPost(post, user);
   }
 
   @Put(':PostId')
-  @UseGuards(AuthGuard())
+  @UseGuards(AuthGuard('jwt'))
   public async updatePost(
     @Param('PostId') id: string,
     @Body(new ValidationPipe({
@@ -55,7 +62,7 @@ export class PostsController {
   }
 
   @Delete(':PostId')
-  @UseGuards(AuthGuard())
+  @UseGuards(AuthGuard('jwt'))
   public async deletePost(@Param('PostId') id: string, @AuthUser() user: User): Promise<PostEntity> {
     return await this.postsService.deletePost(id, user);
   }
@@ -76,6 +83,7 @@ export class PostsController {
   }
 
   @Post('image')
+  @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(FileInterceptor('image',
     {
       storage: diskStorage({
@@ -84,6 +92,9 @@ export class PostsController {
           const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
 
           return cb(null, `${randomName}${extname(file.originalname)}`)
+        },
+        limits: {
+          fileSize: 10
         }
       })
     }
@@ -93,6 +104,7 @@ export class PostsController {
   }
 
   @Post('images')
+  @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(FilesInterceptor('gallery[]',12,{
     storage: diskStorage({
       destination: './postImages',
@@ -100,11 +112,13 @@ export class PostsController {
         const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
 
           return cb(null, `${randomName}${extname(file.originalname)}`)
+      },
+      limits: {
+        fileSize: 10
       }
     })
   }))
   public async uploadImages(@UploadedFiles() files): Promise<ShowImageDTO[]> {
-    console.log('uploadvane na snimkite ot galeriq');
     return this.postsService.uploadImages(files);
   }
 

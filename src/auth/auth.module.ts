@@ -14,11 +14,10 @@ import { config } from '../common/config';
     ConfigModule,
     PassportModule.register({defaultStrategy: 'jwt'}),
     JwtModule.registerAsync({
-      // Use the actual ConfigService, not the hardcoded config object
       useFactory: async () => ({
         secretOrPrivateKey: config.jwtSecret,
         signOptions: {
-          expiresIn: config.expiresIn, // one hour
+          expiresIn: config.expiresIn,
         },
       }),
     }),
