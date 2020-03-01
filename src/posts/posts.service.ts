@@ -11,6 +11,8 @@ import { UploadedFileImageDTO } from '../models/post/uploaded-file-image-dto';
 import { isArray } from 'util';
 import { FrontImageEntity } from '../data/entities/front-image';
 import { GalleryImageEntity } from '../data/entities/gallery-image';
+import { UpdatePostDTO } from '../models/post/update-post-dto';
+import * as fs from 'fs';
 
 @Injectable()
 export class PostsService {
@@ -35,7 +37,7 @@ export class PostsService {
         where: {
           title: filter,
         },
-        relations: ['frontImage'],
+        relations: ['frontImage', 'gallery'],
         take: postsPerPage,
         skip: postsPerPage * (page - 1),
         order: {
@@ -45,7 +47,7 @@ export class PostsService {
       await this.postsRepository.findAndCount({
         take: postsPerPage,
         skip: postsPerPage * (page - 1),
-        relations: ['frontImage'],
+        relations: ['frontImage', 'gallery'],
         order: {
           createdOn: "DESC"
         },
@@ -111,32 +113,93 @@ export class PostsService {
     }
 
     const savedPost = await this.postsRepository.save(newPost);
-    
+
     return savedPost;
   }
 
   // PUT an existing post
-  public async updatePost(id, body: Partial<NewPostDTO>, user: User): Promise<PostEntity> {
+  public async updatePost(id, body: Partial<UpdatePostDTO>, user: User): Promise<PostEntity> {
     const foundPost = await this.getSinglePost(id);
-    const { title, isPublished, content, description } = body;
+    const { title, isPublished, content, description, isFrontPage, deletedFrontImage, deletedGalleryImages, gallery, frontImage } = body;
 
-    if(!!body.title) {
+    if(!!title) {
       foundPost.title = title;
     }
 
-    if(!!body.content) {
+    if(!!content) {
       foundPost.content = content;
     }
 
-    if(!!body.description) {
+    if(!!description) {
       foundPost.description = description;
     }
 
-    foundPost.isPublished = !!isPublished;
-    
-    await this.postsRepository.save(foundPost);
+    if(!!isPublished) {
+      foundPost.isPublished = !!isPublished;
+    }
 
-    return foundPost;
+    if(!!isFrontPage) {
+      foundPost.isFrontPage = !! isFrontPage
+    }
+
+    if(!!gallery && gallery.length > 0) {
+      const arrGallery = gallery.map(image => {
+        if(image.hasOwnProperty('id')) {
+          return image;
+        }
+
+        const newImg =  new GalleryImageEntity();
+  
+        newImg.filename = image.filename;
+        newImg.src = image.src;
+  
+        return newImg;
+      });
+  
+      foundPost.gallery = Promise.resolve(arrGallery);
+    }
+    
+    if(!!frontImage && Object.keys(frontImage).length > 0 && !frontImage.hasOwnProperty('id')) {
+      const newFrontImage = new FrontImageEntity();
+  
+      newFrontImage.src = frontImage.src;
+      newFrontImage.filename = frontImage.filename;
+  
+      foundPost.frontImage = Promise.resolve(newFrontImage);
+    }
+
+    if(!frontImage || Object.keys(frontImage).length === 0) {
+      foundPost.frontImage = null;
+    }
+
+    const saved = await this.postsRepository.save(foundPost);
+
+    // Deleting images form the db and also from the server 
+    if(!!deletedFrontImage && deletedFrontImage.hasOwnProperty('id')) {
+      await this.frontImageRepository.remove(deletedFrontImage);
+
+      fs.unlink(`./postImages/${deletedFrontImage.filename}`, (err) => {
+        if(err) {
+          console.error(err);
+          return;
+        }
+      });
+    }
+
+    if(!!deletedGalleryImages && deletedGalleryImages.length > 0) {
+      await this.galleryImageRepository.remove(deletedGalleryImages);
+
+      deletedGalleryImages.forEach(image => {
+        fs.unlink(`./postImages/${image.filename}`, (err) => {
+          if(err) {
+            console.error(err);
+            return;
+          }
+        });
+      });
+    }
+
+    return saved;
   }
 
   // DELETE an existing post

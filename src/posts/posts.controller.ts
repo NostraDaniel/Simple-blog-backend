@@ -13,6 +13,7 @@ import { PostEntity } from '../data/entities/post';
 import { UploadedFileImageDTO } from '../models/post/uploaded-file-image-dto';
 import { CommonExceptionFilter } from '../common/filters/common-exception.filter';
 import { ValidationExceptionFilter } from '../common/filters/validation-exception.filter';
+import { UpdatePostDTO } from '../models/post/update-post-dto';
 
 @Controller('posts')
 @UseFilters(new CommonExceptionFilter())
@@ -52,10 +53,12 @@ export class PostsController {
   public async updatePost(
     @Param('PostId') id: string,
     @Body(new ValidationPipe({
-      transform: true,
-      whitelist: true,
-    })) body: Partial<NewPostDTO>,
+      // transform: true,
+      // whitelist: true,
+    })) body: UpdatePostDTO,
     @AuthUser() user: User): Promise<PostEntity> {
+      console.log('telotooooo',body);
+      console.log('-------------------');
     return await this.postsService.updatePost(id, body, user);
   }
 
