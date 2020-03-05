@@ -1,5 +1,4 @@
-import { IsString,IsNotEmpty, Length } from "class-validator";
-import { ShowImageDTO } from "./show-image-dto";
+import { IsString, Length } from "class-validator";
 import { FrontImageEntity } from "../../data/entities/front-image";
 import { GalleryImageEntity } from "../../data/entities/gallery-image";
 

@@ -30,7 +30,7 @@ export class PostsService {
     private readonly galleryImageRepository: Repository<GalleryImageEntity>,
   ) {}
   
-  // GET all posts
+  // GET Shows all posts
   public async getAllPosts(page: number = 1, postsPerPage: number = 12, filter: string = ''): Promise<{postsCount: number, posts: PostEntity[]}> {
     const allPosts: [PostEntity[], number] = filter.trim().length > 0 ? 
       await this.postsRepository.findAndCount({
@@ -56,7 +56,7 @@ export class PostsService {
     return {postsCount: allPosts[1], posts: allPosts[0]};
   }
 
-  // GET a single post by :id
+  // GET Show a single post by :id
   public async getSinglePost(id: string): Promise<PostEntity> {
     const foundPost = await this.postsRepository.findOne({
       where: {
@@ -71,9 +71,44 @@ export class PostsService {
 
     return foundPost;
   }
+
+  // GET Show posts for the front page
+  public async getFrontPagePosts(): Promise<PostEntity[]> {
+    const posts = 
+      await this.postsRepository.find({
+        relations: ["frontImage"],
+        where: { 
+            isPublished: true,
+            isFrontPage: true
+        },
+        order: {
+          createdOn: "DESC"
+        },
+        take: 6,
+      });
+
+    return posts;
+  }
+
+  // GET Show newest posts
+  public async getNewestPosts(): Promise<PostEntity[]> {
+    const posts = 
+      await this.postsRepository.find({
+        where: {
+          isPublished: true
+        },
+        relations: ["frontImage"],
+        order: {
+          createdOn: "DESC"
+        },
+        take: 6,
+      });
+    
+    return posts;
+    }
   
-  // POST a post
-  public async createNewPost(body: NewPostDTO, author: User) {
+  // POST Create a post
+  public async createNewPost(body: NewPostDTO, author: User): Promise<PostEntity> {
     const { title, content, isPublished, description, gallery, isFrontPage, frontImage } = body;
     const newPost = new PostEntity();
 
@@ -117,7 +152,33 @@ export class PostsService {
     return savedPost;
   }
 
-  // PUT an existing post
+  // POST Save an image for the front of the post
+  public async uploadImage(file: any): Promise<UploadedFileImageDTO> {
+    if(!file) {
+      throw new NoFileException('No file available!');
+    }
+    
+    const src = `${this.SERVER_URL}posts/${file.path}`;
+    const { filename } = file;
+
+    return await { src, filename }
+  }
+
+  // POST Save images for gallery
+  public async uploadImages(files: any): Promise<ShowImageDTO[]> {
+    if(files.lenght) {
+      throw new NoFileException('No files available!');
+    }
+
+    return await files.map(file => {
+      const src = `${this.SERVER_URL}posts/${file.path}`;
+      const { filename } = file;
+
+      return { src, filename };
+    });
+  }
+
+  // PUT Update an existing post
   public async updatePost(id, body: Partial<UpdatePostDTO>, user: User): Promise<PostEntity> {
     const foundPost = await this.getSinglePost(id);
     const { title, isPublished, content, description, isFrontPage, deletedFrontImage, deletedGalleryImages, gallery, frontImage } = body;
@@ -178,24 +239,14 @@ export class PostsService {
     if(!!deletedFrontImage && deletedFrontImage.hasOwnProperty('id')) {
       await this.frontImageRepository.remove(deletedFrontImage);
 
-      fs.unlink(`./postImages/${deletedFrontImage.filename}`, (err) => {
-        if(err) {
-          console.error(err);
-          return;
-        }
-      });
+      this.deleteImageFile(deletedFrontImage);
     }
 
     if(!!deletedGalleryImages && deletedGalleryImages.length > 0) {
       await this.galleryImageRepository.remove(deletedGalleryImages);
 
       deletedGalleryImages.forEach(image => {
-        fs.unlink(`./postImages/${image.filename}`, (err) => {
-          if(err) {
-            console.error(err);
-            return;
-          }
-        });
+        this.deleteImageFile(image);
       });
     }
 
@@ -207,67 +258,24 @@ export class PostsService {
     const foundPost = await this.getSinglePost(id);
     await this.postsRepository.remove(foundPost);
 
+    // Deleting front image file
+    this.deleteImageFile(foundPost['__frontImage__']);
+
+    // Deleting gallery img files
+    for (const image of foundPost['__gallery__']) {
+      this.deleteImageFile(image);
+    }
+
     return foundPost;
   }
 
-  // POST save an image
-  public async uploadImage(file: any): Promise<UploadedFileImageDTO> {
-    if(!file) {
-      throw new NoFileException('No file available!');
-    }
-    
-    const src = `${this.SERVER_URL}posts/${file.path}`;
-    const { filename } = file;
-
-    return await { src, filename }
-  }
-
-  // POST save images gallery
-  public async uploadImages(files: any): Promise<ShowImageDTO[]> {
-    if(files.lenght) {
-      throw new NoFileException('No files available!');
-    }
-
-    return await files.map(file => {
-      const src = `${this.SERVER_URL}posts/${file.path}`;
-      const { filename } = file;
-
-      return { src, filename };
+  // Delete image file on the server
+  private deleteImageFile(file): void {
+    fs.unlink(`./postImages/${file.filename}`, (err) => {
+      if(err) {
+        console.error(err);
+        return;
+      }
     });
-  }
-
-  // Front page posts
-  public async getFrontPagePosts(): Promise<PostEntity[]> {
-    const posts = 
-      await this.postsRepository.find({
-        relations: ["frontImage"],
-        where: { 
-            isPublished: true,
-            isFrontPage: true
-        },
-        order: {
-          createdOn: "DESC"
-        },
-        take: 6,
-      });
-
-    return posts;
-  }
-
-  // Newest posts
-  public async getNewestPosts(): Promise<PostEntity[]> {
-    const posts = 
-      await this.postsRepository.find({
-        where: {
-          isPublished: true
-        },
-        relations: ["frontImage"],
-        order: {
-          createdOn: "DESC"
-        },
-        take: 6,
-      });
-    
-    return posts;
   }
 }  

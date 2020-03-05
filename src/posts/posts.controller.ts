@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Param, Put, UseGuards, Body, ValidationPipe, Delete, UseInterceptors, UploadedFile, Res, UploadedFiles, UseFilters } from '@nestjs/common';
+import { Controller, Get, Post, Query, Param, Put, UseGuards, Body, ValidationPipe, Delete, UseInterceptors, UploadedFile, Res, UploadedFiles, UseFilters, HttpCode, HttpStatus } from '@nestjs/common';
 import { ShowPostDTO } from '../models/post/show-post-dto';
 import { AuthGuard } from '@nestjs/passport';
 import { NewPostDTO } from '../models/post/new-post-dto';
@@ -25,6 +25,7 @@ export class PostsController {
   
   // Get posts by page, posts per page and filter
   @Get()
+  @HttpCode(HttpStatus.OK)
   async getPosts(
     @Query('page') page: number,
     @Query('posts_per_page') postsPerPage: number,
@@ -37,11 +38,12 @@ export class PostsController {
   @Post()
   @UseGuards(AuthGuard('jwt'))
   @UseFilters(new ValidationExceptionFilter())
+  @HttpCode(HttpStatus.CREATED)
   async createNewPost
     (
       @Body(new ValidationPipe({
-        // transform: true,
-        // whitelist: true,
+        transform: true,
+        whitelist: true,
       })) post: NewPostDTO,
       @AuthUser() user: User
     ): Promise<PostEntity> {
@@ -50,6 +52,7 @@ export class PostsController {
 
   @Put(':PostId')
   @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
   public async updatePost(
     @Param('PostId') id: string,
     @Body(new ValidationPipe({
@@ -57,34 +60,37 @@ export class PostsController {
       // whitelist: true,
     })) body: UpdatePostDTO,
     @AuthUser() user: User): Promise<PostEntity> {
-      console.log('telotooooo',body);
-      console.log('-------------------');
     return await this.postsService.updatePost(id, body, user);
   }
 
   @Delete(':PostId')
   @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
   public async deletePost(@Param('PostId') id: string, @AuthUser() user: User): Promise<PostEntity> {
     return await this.postsService.deletePost(id, user);
   }
 
   @Get('newest')
+  @HttpCode(HttpStatus.OK)
   async getNewestPosts(): Promise<ShowPostDTO[]> {
     return this.postsService.getNewestPosts();
   }
 
   @Get('front-page')
+  @HttpCode(HttpStatus.OK)
   async getFrontPagePosts(): Promise<ShowPostDTO[]> {
     return this.postsService.getFrontPagePosts();
   }
 
   @Get(':PostId')
+  @HttpCode(HttpStatus.FOUND)
   public async getSinglePost(@Param('PostId') id: string): Promise<any> {
     return await this.postsService.getSinglePost(id);
   }
 
   @Post('image')
   @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image',
     {
       storage: diskStorage({
@@ -106,6 +112,7 @@ export class PostsController {
 
   @Post('images')
   @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FilesInterceptor('gallery[]',12,{
     storage: diskStorage({
       destination: './postImages',
@@ -124,6 +131,7 @@ export class PostsController {
   }
 
   @Get('postImages/:fileId')
+  @HttpCode(HttpStatus.FOUND)
   async serveAvatar(@Param('fileId') fileId, @Res() res): Promise<any> {
     res.sendFile(fileId, { root: 'postImages'});
   }

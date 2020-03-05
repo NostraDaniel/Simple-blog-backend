@@ -5,11 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   VersionColumn,
-  ManyToMany,
-  JoinTable,
   OneToMany,
 } from 'typeorm';
-import { Role } from './role';
 import { PostEntity } from './post';
 
 @Entity('users')
@@ -25,10 +22,6 @@ export class User {
 
   @Column({ unique: true })
   email: string;
-
-  @ManyToMany(type => Role, { eager: true })
-  @JoinTable()
-  roles: Role[];
 
   @CreateDateColumn()
   createdOn: Date;

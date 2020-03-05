@@ -1,32 +1,29 @@
-import { Controller, Post, Body, ValidationPipe, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, ValidationPipe, UseFilters, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../core/services/users.service';
 import { UserLoginDTO } from '../models/user/user-login-dto';
 import { UserRegisterDTO } from '../models/user/user-register-dto';
-import { User } from '../data/entities/user';
+import { CommonExceptionFilter } from '../common/filters/common-exception.filter';
 
 @Controller('')
+@UseFilters(new CommonExceptionFilter())
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
   ) {}
-
+  
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body(new ValidationPipe({
     transform: true,
     whitelist: true,
-  })) user: UserLoginDTO): Promise<{user: User, token: string}> {
-    const authObject = await this.authService.signIn(user);
-
-    if (!authObject) {
-      throw new BadRequestException(`Wrong credentials!`);
-    }
-
-    return authObject;
+  })) user: UserLoginDTO): Promise<{user: {name: string, email:string, id: string}, token: string}> {
+    return await this.authService.logIn(user);
   }
 
   @Post('register')
+  @HttpCode(HttpStatus.CREATED)
   async register(@Body(new ValidationPipe({
     transform: true,
     whitelist: true,

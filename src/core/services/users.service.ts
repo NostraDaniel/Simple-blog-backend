@@ -1,18 +1,19 @@
-import { Injectable, Post } from '@nestjs/common';
+import { Injectable, Post, HttpException, HttpStatus } from '@nestjs/common';
 import { User } from '../../data/entities/user';
 import { UserLoginDTO } from '../../models/user/user-login-dto';
 import { JwtPayload } from '../interfaces/jwt-payload';
 import { UserRegisterDTO } from '../../models/user/user-register-dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Role } from '../../data/entities/role';
-import { UserRole } from '../../common/enums/user-role.enum';
+import { ShowUserDTO } from '../../models/user/show-user-dto';
+import { UserAlreadyExistException } from '../../common/exceptions/user/user-already-exit.exception';
+import * as bcrypt from 'bcrypt';
+import { plainToClass } from 'class-transformer';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    @InjectRepository(User) private readonly rolesRepository: Repository<Role>,
   ) {}
 
   async signIn(user: UserLoginDTO): Promise<User | undefined> {
@@ -23,16 +24,19 @@ export class UsersService {
     });
   }
 
-  async register(user: UserRegisterDTO): Promise<User | undefined> {
-    const basicRole = await this.rolesRepository.findOne({
-      name: UserRole.Basic,
-    });
-    const savedUser = await this.userRepository.save({
-      ...user,
-      roles: [basicRole],
-    });
+  async  register(user: UserRegisterDTO): Promise<ShowUserDTO | undefined> {
+    const checkExist: User = await this.findUserByEmail(user.email);
 
-    return savedUser;
+    if (!!checkExist) {
+      throw new UserAlreadyExistException('User with such email already exists!')
+    }
+
+    const passwordHash = await this.hashPassword(user.password);
+    user.password = passwordHash;
+
+    const newUser = await this.userRepository.save(user)
+
+    return plainToClass(ShowUserDTO, newUser, {excludeExtraneousValues: true});
   }
 
   async validate(payload: JwtPayload): Promise<User | undefined> {
@@ -41,5 +45,14 @@ export class UsersService {
         ...payload,
       },
     });
+  }
+
+  public async findUserByEmail(email: string): Promise<User> | undefined {
+    const user = await this.userRepository.findOne({ email });
+    return user;
+  }
+
+  public async hashPassword(password): Promise<string> {
+    return await bcrypt.hash(password, 10)
   }
 }
