@@ -19,7 +19,7 @@ MAIL_PASS=
 MAIL_SECURE=
 ```
 For the email notification the free services of sendgrid.net can be used.
-Also a config file has to be created with information used from Pasport in src/common/config.ts:
+Also a config file has to be created with information used from Passport in src/common/config.ts:
 ```
 export const config = {
   jwtSecret: 'VerySecr3t!',
